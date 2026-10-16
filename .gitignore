@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+data/supabase_config.json
+data/users_store.json
+models/*.task
+.venv/
+venv/
