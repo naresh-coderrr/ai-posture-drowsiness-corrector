@@ -10,48 +10,60 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/styles.css" />
 </head>
-<body class="bg-[#090d16] text-slate-100 min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
+<body class="text-slate-100 min-h-screen flex flex-col selection:bg-fuchsia-500 selection:text-white relative overflow-x-hidden">
 
-  <!-- TOP EMERGENCY ALERT BANNER (Shows only when Slouching, Dozing Off, or Holding Phone) -->
-  <div id="emergencyBanner" class="hidden fixed top-0 inset-x-0 z-50 bg-rose-600 text-white py-3 px-4 shadow-2xl border-b border-rose-400">
+  <!-- VIBRANT ANIMATED AURORA MESH & COLORFUL ORBS BACKGROUND -->
+  <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+    <div class="aurora-blob blob-pink"></div>
+    <div class="aurora-blob blob-cyan"></div>
+    <div class="aurora-blob blob-purple"></div>
+    <div class="aurora-blob blob-emerald"></div>
+    <div class="aurora-blob blob-amber"></div>
+    <div class="sparkle-grid"></div>
+  </div>
+
+  <!-- TOP EMERGENCY ALERT BANNER (Shows when Slouching, Dozing Off, or Holding Phone) -->
+  <div id="emergencyBanner" class="hidden fixed top-0 inset-x-0 z-50 bg-gradient-to-r from-rose-600 via-pink-600 to-orange-500 text-white py-3 px-4 shadow-2xl border-b border-white/30">
     <div class="max-w-6xl mx-auto flex items-center justify-between gap-3">
       <div class="flex items-center gap-3">
         <span class="text-xl animate-bounce">🚨</span>
-        <p id="emergencyBannerTitle" class="font-bold text-sm sm:text-base tracking-wide">
+        <p id="emergencyBannerTitle" class="font-extrabold text-sm sm:text-base tracking-wide drop-shadow">
           SIT UP STRAIGHT!
         </p>
       </div>
-      <span id="emergencyBannerSub" class="text-xs font-semibold bg-black/25 px-3 py-1 rounded-full">
+      <span id="emergencyBannerSub" class="text-xs font-bold bg-black/30 px-3.5 py-1 rounded-full border border-white/20">
         Audio Alert Active
       </span>
     </div>
   </div>
 
-  <!-- SIMPLE, CLEAN NAVIGATION HEADER -->
-  <header class="border-b border-slate-800/80 bg-[#0d1322]/90 backdrop-blur-md sticky top-0 z-30">
+  <!-- VIBRANT GLASS NAVIGATION HEADER -->
+  <header class="relative z-30 border-b border-white/15 bg-slate-950/55 backdrop-blur-2xl sticky top-0 shadow-lg shadow-purple-950/20">
     <div class="max-w-6xl mx-auto px-4 py-3.5 flex flex-wrap items-center justify-between gap-3">
-      <!-- Brand -->
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-indigo-500/20 text-slate-950 font-extrabold text-lg">
+      <!-- Brand Logo -->
+      <div class="flex items-center gap-3.5">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-fuchsia-500 via-indigo-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-fuchsia-500/30 border border-white/25 text-xl">
           🛡️
         </div>
         <div>
-          <h1 class="text-lg font-extrabold tracking-tight text-white flex items-center gap-2">
-            SpineGuard AI
-            <span class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-              Live Study Coach
+          <div class="flex items-center gap-2.5">
+            <h1 class="text-lg sm:text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-cyan-200 to-fuchsia-300 bg-clip-text text-transparent">
+              SpineGuard AI
+            </h1>
+            <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-gradient-to-r from-emerald-500/25 to-cyan-500/25 text-emerald-300 border border-emerald-400/40 shadow-sm">
+              ✨ Live Study Coach
             </span>
-          </h1>
-          <p class="text-xs text-slate-400">
-            Tracks Posture, Eye Drowsiness &amp; Mobile Phone Distraction
+          </div>
+          <p class="text-xs text-slate-300/80">
+            AI Posture &bull; Eye Drowsiness &bull; Smart Mobile Phone Guard
           </p>
         </div>
       </div>
 
       <!-- Right Controls: 5-Min Free Trial Timer + Floating Study Window + Login -->
       <div class="flex items-center gap-2.5">
-        <!-- 5-Minute Free Trial Pill -->
-        <div id="trialBadgeContainer" class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-200 text-xs font-semibold">
+        <!-- 5-Minute Free Trial / Pro Member Pill -->
+        <div id="trialBadgeContainer" class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-400/40 text-amber-200 text-xs font-bold shadow-md">
           <span>⏱️</span>
           <span id="trialLabelText">Free Trial:</span>
           <strong id="trialCountdownText" class="font-mono text-sm text-amber-300">05:00</strong>
@@ -59,7 +71,7 @@
 
         <!-- Floating Mini Window for Studying in Other Tabs -->
         <button id="btnPipToggle"
-          class="hidden sm:inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition"
+          class="hidden sm:inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-bold backdrop-blur-md transition shadow-md"
           title="Pop out a small floating window so you can switch tabs to study!">
           <span>🗗</span>
           <span>Mini Study Window</span>
@@ -67,7 +79,7 @@
 
         <!-- Login / Account Button -->
         <button id="btnOpenAuth"
-          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-xs sm:text-sm shadow-lg shadow-indigo-500/25 transition">
+          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-fuchsia-500 via-purple-500 to-indigo-500 hover:from-fuchsia-400 hover:via-purple-400 hover:to-indigo-400 text-white font-bold text-xs sm:text-sm shadow-lg shadow-fuchsia-500/30 border border-white/20 transition">
           <span>👤</span>
           <span id="navUserText">Login / Sign Up</span>
         </button>
@@ -75,78 +87,95 @@
     </div>
   </header>
 
-  <!-- MAIN USER-FRIENDLY WORKSPACE -->
-  <main class="flex-1 max-w-6xl w-full mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+  <!-- MAIN WORKSPACE -->
+  <main class="relative z-10 flex-1 max-w-6xl w-full mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-    <!-- LEFT COLUMN: LIVE CAMERA & SIMPLE 1-CLICK CONTROLS (7 Columns) -->
+    <!-- LEFT COLUMN: LIVE CAMERA & COLORFUL 1-CLICK CONTROLS (7 Columns) -->
     <div class="lg:col-span-7 flex flex-col gap-4">
-      <div class="bg-[#111827] rounded-3xl p-4 sm:p-5 border border-slate-800 shadow-xl">
+      <div class="vibrant-glass-card rounded-3xl p-4 sm:p-5 relative overflow-hidden">
+
+        <!-- Top Glow Accent Line -->
+        <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-amber-400"></div>
 
         <!-- Friendly Status Bar Above Video -->
-        <div class="flex items-center justify-between gap-2 mb-3">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3.5">
           <div class="flex items-center gap-2.5">
-            <span id="liveBadgeDot" class="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span id="liveStatusText" class="text-sm font-bold text-emerald-300">
+            <span id="liveBadgeDot" class="w-3 h-3 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_12px_#34d399]"></span>
+            <span id="liveStatusText" class="text-sm font-extrabold text-emerald-300">
               You're doing great! Keep sitting straight 👍
             </span>
           </div>
-          <span id="tabVisibilityBadge" class="text-xs font-medium px-2.5 py-1 rounded-full bg-slate-800 text-slate-300">
-            Background Study Guard: Ready
+          <span id="tabVisibilityBadge" class="text-xs font-bold px-3 py-1 rounded-full bg-gradient-to-r from-indigo-500/25 to-purple-500/25 text-indigo-200 border border-indigo-400/30">
+            🛡️ Study Guard: Active
           </span>
         </div>
 
         <!-- Webcam Viewport -->
-        <div id="videoViewport" class="relative w-full aspect-video rounded-2xl overflow-hidden bg-slate-950 border-2 border-slate-800 shadow-inner">
+        <div id="videoViewport" class="relative w-full aspect-video rounded-2xl overflow-hidden bg-slate-950/90 border-2 border-white/15 shadow-2xl flex items-center justify-center">
           <video id="webcamVideo" autoplay playsinline muted class="w-full h-full object-cover transform scale-x-[-1]"></video>
           <canvas id="hudCanvas" class="absolute inset-0 w-full h-full pointer-events-none transform scale-x-[-1]"></canvas>
 
-          <!-- Clean, Easy-to-Read Pill Overlay on Top-Left of Video -->
-          <div class="absolute top-3 left-3 flex flex-wrap gap-2 pointer-events-none">
-            <div class="px-3 py-1.5 rounded-xl bg-slate-950/80 backdrop-blur-md border border-white/10 text-xs font-semibold flex items-center gap-2">
-              <span>👀 Blinks:</span>
-              <strong id="hudBlinkCount" class="text-cyan-300 font-mono">0</strong>
+          <!-- Interactive Camera Permission Overlay (Shown if camera isn't active yet) -->
+          <div id="cameraPromptOverlay" class="hidden absolute inset-0 bg-gradient-to-br from-slate-950/95 via-indigo-950/90 to-fuchsia-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20">
+            <div class="w-16 h-16 rounded-3xl bg-gradient-to-tr from-cyan-400 to-fuchsia-500 flex items-center justify-center text-3xl shadow-xl shadow-fuchsia-500/30 mb-3 animate-bounce">
+              📷
             </div>
-            <div class="px-3 py-1.5 rounded-xl bg-slate-950/80 backdrop-blur-md border border-white/10 text-xs font-semibold flex items-center gap-2">
+            <h3 class="text-lg font-extrabold text-white mb-1">Enable Your Webcam to Start</h3>
+            <p class="text-xs text-slate-300 max-w-sm mb-4">
+              Click below and allow browser camera access so SpineGuard AI can track your posture, eye blinks, and mobile phone distractions live!
+            </p>
+            <button id="btnRetryCamera" class="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-400 via-indigo-500 to-fuchsia-500 hover:opacity-95 text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-indigo-500/30 transition">
+              ✨ Start Live Camera Now
+            </button>
+          </div>
+
+          <!-- Clean, Easy-to-Read Pill Overlay on Top-Left of Video -->
+          <div class="absolute top-3 left-3 flex flex-wrap gap-2 pointer-events-none z-10">
+            <div class="px-3.5 py-1.5 rounded-xl bg-slate-950/75 backdrop-blur-md border border-cyan-400/30 text-xs font-bold flex items-center gap-2 shadow-lg">
+              <span>👀 Blinks:</span>
+              <strong id="hudBlinkCount" class="text-cyan-300 font-mono text-sm">0</strong>
+            </div>
+            <div class="px-3.5 py-1.5 rounded-xl bg-slate-950/75 backdrop-blur-md border border-emerald-400/30 text-xs font-bold flex items-center gap-2 shadow-lg">
               <span>🧘 Posture:</span>
-              <strong id="hudSpineScore" class="text-emerald-400 font-mono">100%</strong>
+              <strong id="hudSpineScore" class="text-emerald-300 font-mono text-sm">100%</strong>
             </div>
           </div>
 
           <!-- Big Clear Alert Popup Inside Video When Slouching / Dozing / Using Phone -->
-          <div id="videoAlertOverlay" class="hidden absolute bottom-4 inset-x-4 p-4 rounded-2xl bg-rose-600/95 text-white shadow-2xl backdrop-blur-md flex items-center justify-between gap-4">
+          <div id="videoAlertOverlay" class="hidden absolute bottom-4 inset-x-4 p-4 rounded-2xl bg-gradient-to-r from-rose-600/95 via-pink-600/95 to-orange-600/95 text-white shadow-2xl border border-white/30 backdrop-blur-md flex items-center justify-between gap-4 z-10">
             <div class="flex items-center gap-3">
-              <span class="text-3xl">⚠️</span>
+              <span class="text-3xl animate-bounce">⚠️</span>
               <div>
-                <h4 id="videoAlertTitle" class="text-sm sm:text-base font-extrabold uppercase">
+                <h4 id="videoAlertTitle" class="text-sm sm:text-base font-extrabold uppercase tracking-wide">
                   SIT UP STRAIGHT!
                 </h4>
-                <p id="videoAlertDesc" class="text-xs sm:text-sm text-rose-100">
+                <p id="videoAlertDesc" class="text-xs sm:text-sm text-white/90 font-medium">
                   Pull your shoulders back and look at the screen.
                 </p>
               </div>
             </div>
-            <button id="btnAcknowledgeAlert" class="px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-bold shrink-0">
+            <button id="btnAcknowledgeAlert" class="px-3.5 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-extrabold border border-white/30 shrink-0">
               Got it
             </button>
           </div>
         </div>
 
-        <!-- 3 Big, Simple Action Buttons Below Camera -->
+        <!-- 3 Colorful Action Buttons Below Camera -->
         <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
           <button id="btnCalibrate"
-            class="py-3 px-4 rounded-2xl bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-200 border border-indigo-500/40 font-bold text-sm flex items-center justify-center gap-2 transition">
+            class="py-3 px-4 rounded-2xl bg-gradient-to-r from-indigo-500/30 to-purple-500/30 hover:from-indigo-500/45 hover:to-purple-500/45 text-white border border-indigo-400/40 font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-950/40 transition">
             <span>🎯</span>
             <span>Set My Upright Posture</span>
           </button>
 
           <button id="btnToggleCamera"
-            class="py-3 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-sm flex items-center justify-center gap-2 transition">
+            class="py-3 px-4 rounded-2xl bg-gradient-to-r from-cyan-500/25 to-blue-500/25 hover:from-cyan-500/40 hover:to-blue-500/40 text-cyan-100 border border-cyan-400/40 font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-cyan-950/40 transition">
             <span id="btnCameraIcon">⏸</span>
             <span id="btnCameraText">Pause Tracking</span>
           </button>
 
           <button id="btnTestAlert"
-            class="py-3 px-4 rounded-2xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 border border-amber-500/30 font-bold text-sm flex items-center justify-center gap-2 transition">
+            class="py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-500/25 to-pink-500/25 hover:from-amber-500/40 hover:to-pink-500/40 text-amber-100 border border-amber-400/40 font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-amber-950/40 transition">
             <span>🔊</span>
             <span>Test Sound Alert</span>
           </button>
@@ -154,79 +183,79 @@
       </div>
     </div>
 
-    <!-- RIGHT COLUMN: 3 LARGE STATUS CARDS & SIMPLE SOUND PICKER (5 Columns) -->
+    <!-- RIGHT COLUMN: 3 COLORFUL STATUS CARDS & SOUND PICKER (5 Columns) -->
     <div class="lg:col-span-5 flex flex-col gap-4">
 
-      <!-- 3 Friendly Live Status Cards -->
+      <!-- 3 Vibrant Live Status Cards -->
       <div class="grid grid-cols-1 gap-3.5">
 
-        <!-- Status Card 1: Spinal Posture -->
-        <div id="cardBoxPosture" class="bg-[#111827] rounded-3xl p-4 border border-slate-800 flex items-center justify-between gap-4 transition">
+        <!-- Status Card 1: Spinal Posture (Emerald / Teal Glow) -->
+        <div id="cardBoxPosture" class="vibrant-glass-card card-glow-emerald rounded-3xl p-4 flex items-center justify-between gap-4 transition">
           <div class="flex items-center gap-3.5">
-            <div id="iconBoxPosture" class="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-2xl">
+            <div id="iconBoxPosture" class="w-13 h-13 p-3 rounded-2xl bg-gradient-to-br from-emerald-400/30 to-teal-500/30 border border-emerald-400/40 flex items-center justify-center text-2xl shadow-lg shadow-emerald-500/20">
               🧘
             </div>
             <div>
-              <div class="text-xs font-semibold uppercase tracking-wider text-slate-400">Back &amp; Neck Posture</div>
-              <div id="cardPostureStatus" class="text-lg font-extrabold text-emerald-400">Sitting Straight</div>
-              <div id="cardPostureSub" class="text-xs text-slate-400">Shoulders balanced &amp; aligned</div>
+              <div class="text-[11px] font-bold uppercase tracking-wider text-emerald-300/90">Back &amp; Neck Posture</div>
+              <div id="cardPostureStatus" class="text-lg font-extrabold text-white">Sitting Straight</div>
+              <div id="cardPostureSub" class="text-xs text-slate-300/80">Shoulders balanced &amp; aligned</div>
             </div>
           </div>
           <div class="text-right">
-            <span id="cardSpineScore" class="text-2xl font-extrabold font-mono text-white">100%</span>
+            <span id="cardSpineScore" class="text-2xl font-extrabold font-mono bg-gradient-to-r from-emerald-300 to-cyan-300 bg-clip-text text-transparent">100%</span>
           </div>
         </div>
 
-        <!-- Status Card 2: Eyes & Drowsiness -->
-        <div id="cardBoxEyes" class="bg-[#111827] rounded-3xl p-4 border border-slate-800 flex items-center justify-between gap-4 transition">
+        <!-- Status Card 2: Eyes & Drowsiness (Cyan / Blue Glow) -->
+        <div id="cardBoxEyes" class="vibrant-glass-card card-glow-cyan rounded-3xl p-4 flex items-center justify-between gap-4 transition">
           <div class="flex items-center gap-3.5">
-            <div id="iconBoxEyes" class="w-12 h-12 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-2xl">
+            <div id="iconBoxEyes" class="w-13 h-13 p-3 rounded-2xl bg-gradient-to-br from-cyan-400/30 to-blue-500/30 border border-cyan-400/40 flex items-center justify-center text-2xl shadow-lg shadow-cyan-500/20">
               👁️
             </div>
             <div>
-              <div class="text-xs font-semibold uppercase tracking-wider text-slate-400">Eye Alertness &amp; Blinks</div>
-              <div id="cardEyeStatus" class="text-lg font-extrabold text-cyan-300">Awake &amp; Focused</div>
-              <div class="text-xs text-slate-400">
-                EAR: <strong id="cardEarValue" class="font-mono text-slate-200">0.30</strong> &bull;
-                Blinks: <strong id="cardTotalBlinks" class="font-mono text-slate-200">0</strong>
+              <div class="text-[11px] font-bold uppercase tracking-wider text-cyan-300/90">Eye Alertness &amp; Blinks</div>
+              <div id="cardEyeStatus" class="text-lg font-extrabold text-white">Awake &amp; Focused</div>
+              <div class="text-xs text-slate-300/80">
+                EAR: <strong id="cardEarValue" class="font-mono text-cyan-200">0.30</strong> &bull;
+                Blinks: <strong id="cardTotalBlinks" class="font-mono text-cyan-200">0</strong>
               </div>
             </div>
           </div>
           <div class="text-right">
-            <span id="cardBlinkRate" class="text-sm font-bold font-mono text-cyan-300">0 / min</span>
+            <span id="cardBlinkRate" class="px-3 py-1 rounded-full text-xs font-bold font-mono bg-cyan-500/20 text-cyan-200 border border-cyan-400/30">0 / min</span>
           </div>
         </div>
 
-        <!-- Status Card 3: AI Mobile Phone Detector -->
-        <div id="cardBoxPhone" class="bg-[#111827] rounded-3xl p-4 border border-slate-800 flex items-center justify-between gap-4 transition">
+        <!-- Status Card 3: AI Mobile Phone Detector (Purple / Fuchsia Glow) -->
+        <div id="cardBoxPhone" class="vibrant-glass-card card-glow-purple rounded-3xl p-4 flex items-center justify-between gap-4 transition">
           <div class="flex items-center gap-3.5">
-            <div id="iconBoxPhone" class="w-12 h-12 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-2xl">
+            <div id="iconBoxPhone" class="w-13 h-13 p-3 rounded-2xl bg-gradient-to-br from-fuchsia-500/30 to-purple-600/30 border border-fuchsia-400/40 flex items-center justify-center text-2xl shadow-lg shadow-fuchsia-500/20">
               📵
             </div>
             <div>
-              <div class="text-xs font-semibold uppercase tracking-wider text-slate-400">Mobile Phone Distraction</div>
-              <div id="cardPhoneState" class="text-lg font-extrabold text-emerald-400">No Phone Detected</div>
-              <div id="cardPhoneReason" class="text-xs text-slate-400">AI Object Detector watching for phones</div>
+              <div class="text-[11px] font-bold uppercase tracking-wider text-fuchsia-300/90">Mobile Phone Distraction</div>
+              <div id="cardPhoneState" class="text-lg font-extrabold text-white">No Phone Detected</div>
+              <div id="cardPhoneReason" class="text-xs text-slate-300/80">Hands ignored &bull; AI watches for real phones</div>
             </div>
           </div>
           <div class="text-right">
-            <span id="cardPhoneBadge" class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-300">
+            <span id="cardPhoneBadge" class="px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-500/25 text-emerald-200 border border-emerald-400/40">
               Clear
             </span>
           </div>
         </div>
       </div>
 
-      <!-- SIMPLE SOUND ALERT TOGGLE CARD (Funny Voice vs Alarm Siren vs Custom MP3) -->
-      <div class="bg-[#111827] rounded-3xl p-5 border border-slate-800">
+      <!-- SOUND ALERT TOGGLE CARD (Funny Voice vs Loud Alarm vs Custom MP3) -->
+      <div class="vibrant-glass-card rounded-3xl p-5">
         <div class="flex items-center justify-between mb-3">
           <div>
-            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            <h3 class="text-sm font-extrabold text-white flex items-center gap-2">
               <span>🔔</span> Choose Your Wake-Up Sound
             </h3>
-            <p class="text-xs text-slate-400">Plays instantly when you slouch, doze off, or hold your phone</p>
+            <p class="text-xs text-slate-300/80">Triggers the second you slouch, doze off, or grab your phone</p>
           </div>
-          <label class="inline-flex items-center gap-1.5 text-xs text-slate-400 cursor-pointer">
+          <label class="inline-flex items-center gap-1.5 text-xs font-bold text-rose-300 cursor-pointer bg-rose-500/15 px-2.5 py-1 rounded-lg border border-rose-400/30">
             <input type="checkbox" id="chkAudioMute" class="rounded accent-rose-500" />
             <span>Mute</span>
           </label>
@@ -234,47 +263,47 @@
 
         <div class="grid grid-cols-3 gap-2.5">
           <button type="button" data-audio-mode="funny"
-            class="audio-mode-btn active-mode py-3 px-3 rounded-2xl border text-xs font-bold flex flex-col items-center gap-1.5 transition">
-            <span class="text-xl">😂</span>
+            class="audio-mode-btn active-mode py-3 px-3 rounded-2xl border text-xs font-extrabold flex flex-col items-center gap-1.5 transition">
+            <span class="text-2xl">😂</span>
             <span>Funny Voice</span>
           </button>
           <button type="button" data-audio-mode="alarm"
-            class="audio-mode-btn py-3 px-3 rounded-2xl border text-xs font-bold flex flex-col items-center gap-1.5 transition">
-            <span class="text-xl">🚨</span>
+            class="audio-mode-btn py-3 px-3 rounded-2xl border text-xs font-extrabold flex flex-col items-center gap-1.5 transition">
+            <span class="text-2xl">🚨</span>
             <span>Loud Alarm</span>
           </button>
           <button type="button" data-audio-mode="custom"
-            class="audio-mode-btn py-3 px-3 rounded-2xl border text-xs font-bold flex flex-col items-center gap-1.5 transition">
-            <span class="text-xl">🎵</span>
+            class="audio-mode-btn py-3 px-3 rounded-2xl border text-xs font-extrabold flex flex-col items-center gap-1.5 transition">
+            <span class="text-2xl">🎵</span>
             <span>Custom MP3</span>
           </button>
         </div>
 
         <!-- Custom Audio Upload -->
-        <div class="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
-          <span class="text-xs text-slate-400">Or upload your own sound:</span>
+        <div class="mt-3.5 pt-3 border-t border-white/10 flex items-center justify-between gap-2">
+          <span class="text-xs font-medium text-slate-300">Upload custom audio:</span>
           <input type="file" id="customAudioInput" accept="audio/*"
-            class="text-xs text-slate-300 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-500/20 file:text-indigo-300 hover:file:bg-indigo-500/30 cursor-pointer max-w-[200px]" />
+            class="text-xs text-slate-200 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-extrabold file:bg-gradient-to-r file:from-fuchsia-500 file:to-indigo-500 file:text-white hover:file:opacity-90 cursor-pointer max-w-[210px]" />
         </div>
       </div>
 
-      <!-- STUDY TAB TIP CARD -->
-      <div class="bg-indigo-950/30 rounded-3xl p-4 border border-indigo-500/25 flex items-start gap-3">
-        <span class="text-xl">💡</span>
-        <div class="text-xs text-slate-300 leading-relaxed">
-          <strong class="text-white">Studying in another browser tab?</strong> Just leave this tab open in the background or click <strong>Mini Study Window</strong> above. If you slouch, close your eyes, or pick up your mobile phone, SpineGuard AI will immediately trigger an audio alert and a laptop notification!
+      <!-- COLORFUL STUDY TAB TIP CARD -->
+      <div class="rounded-3xl p-4 bg-gradient-to-r from-indigo-600/25 via-purple-600/25 to-fuchsia-600/25 border border-fuchsia-400/30 backdrop-blur-xl flex items-start gap-3 shadow-lg">
+        <span class="text-2xl">🚀</span>
+        <div class="text-xs text-slate-200 leading-relaxed">
+          <strong class="text-white">Studying in another tab?</strong> Leave this tab open or click <strong>Mini Study Window</strong> at the top. If you slouch, doze off, or pick up your mobile phone, you'll get an instant voice alert + laptop notification!
         </div>
       </div>
     </div>
   </main>
 
   <!-- FOOTER WITH COPYRIGHT TAG -->
-  <footer class="border-t border-slate-800/80 bg-[#0d1322] py-4 px-4 mt-auto">
-    <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-400">
+  <footer class="relative z-10 border-t border-white/15 bg-slate-950/60 backdrop-blur-xl py-4 px-4 mt-auto">
+    <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-300">
       <div>
-        <strong class="text-slate-200">SpineGuard AI</strong> &mdash; Real-Time Python MediaPipe Posture, Drowsiness &amp; Phone Detector
+        <strong class="text-white">SpineGuard AI</strong> &mdash; Real-Time Python MediaPipe Posture, Drowsiness &amp; Phone Detector
       </div>
-      <div class="font-semibold text-indigo-300">
+      <div class="font-bold bg-gradient-to-r from-cyan-300 via-fuchsia-300 to-amber-300 bg-clip-text text-transparent">
         &copy; 2026 Naresh (naresh-coderrr). All Rights Reserved.
       </div>
     </div>
@@ -283,28 +312,30 @@
   <!-- ===================================================================== -->
   <!-- LOGIN / SIGN UP MODAL (5-Min Free Trial Gate + Unique Password in Supabase) -->
   <!-- ===================================================================== -->
-  <div id="authModal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-lg flex items-center justify-center p-4">
-    <div class="bg-[#111827] max-w-md w-full rounded-3xl p-6 border border-slate-700 shadow-2xl relative">
-      <button id="btnCloseAuthModal" class="absolute top-5 right-5 text-slate-400 hover:text-white text-sm font-bold">
+  <div id="authModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
+    <div class="vibrant-glass-card max-w-md w-full rounded-3xl p-6 border border-fuchsia-400/40 shadow-2xl relative">
+      <button id="btnCloseAuthModal" class="absolute top-5 right-5 text-slate-300 hover:text-white text-sm font-bold">
         ✕
       </button>
 
       <!-- Trial Expired Banner -->
-      <div id="trialExpiredNotice" class="hidden mb-4 p-3.5 rounded-2xl bg-amber-500/15 border border-amber-500/40 text-amber-200 text-xs leading-relaxed">
-        ⏰ <strong>Your 5-Minute Free Trial has finished!</strong> Create a free account or log in below with your <strong>unique password</strong> to continue using SpineGuard AI with no time limits.
+      <div id="trialExpiredNotice" class="hidden mb-4 p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/20 to-rose-500/20 border border-amber-400/50 text-amber-200 text-xs leading-relaxed">
+        ⏰ <strong>Your 5-Minute Free Trial has finished!</strong> Create a free account or log in below with your <strong>unique password</strong> to continue using SpineGuard AI with no limits.
       </div>
 
       <div class="mb-4">
-        <h2 class="text-xl font-extrabold text-white">Welcome to SpineGuard AI</h2>
-        <p class="text-xs text-slate-400 mt-0.5">Connected to Supabase &bull; Every user gets a 100% unique password</p>
+        <h2 class="text-xl font-extrabold bg-gradient-to-r from-white via-cyan-200 to-fuchsia-300 bg-clip-text text-transparent">
+          Welcome to SpineGuard AI
+        </h2>
+        <p class="text-xs text-slate-300 mt-0.5">Connected to Supabase &bull; Every user gets a 100% unique password</p>
       </div>
 
       <!-- Tabs -->
-      <div class="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-slate-900 border border-slate-800 mb-4">
-        <button id="tabBtnSignup" class="py-2.5 rounded-xl text-xs font-bold bg-indigo-500 text-white transition">
+      <div class="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-slate-950/70 border border-white/15 mb-4">
+        <button id="tabBtnSignup" class="py-2.5 rounded-xl text-xs font-extrabold bg-gradient-to-r from-fuchsia-500 to-indigo-500 text-white transition">
           Sign Up (New User)
         </button>
-        <button id="tabBtnLogin" class="py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition">
+        <button id="tabBtnLogin" class="py-2.5 rounded-xl text-xs font-extrabold text-slate-300 hover:text-white transition">
           Login
         </button>
       </div>
@@ -312,33 +343,33 @@
       <!-- SIGN UP FORM -->
       <form id="formSignup" class="space-y-3.5">
         <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Username</label>
+          <label class="block text-xs font-bold text-slate-200 mb-1">Username</label>
           <input type="text" id="regUsername" required placeholder="e.g. naresh"
-            class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-indigo-400" />
+            class="w-full px-4 py-2.5 rounded-xl bg-slate-950/80 border border-white/20 text-sm text-white focus:outline-none focus:border-fuchsia-400" />
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Email Address</label>
+          <label class="block text-xs font-bold text-slate-200 mb-1">Email Address</label>
           <input type="email" id="regEmail" required placeholder="you@example.com"
-            class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-indigo-400" />
+            class="w-full px-4 py-2.5 rounded-xl bg-slate-950/80 border border-white/20 text-sm text-white focus:outline-none focus:border-fuchsia-400" />
         </div>
         <div>
           <div class="flex items-center justify-between mb-1">
-            <label class="block text-xs font-semibold text-slate-300">Create a Unique Password</label>
-            <button type="button" id="btnGenerateUniquePw" class="text-xs font-bold text-indigo-400 hover:underline">
+            <label class="block text-xs font-bold text-slate-200">Create a Unique Password</label>
+            <button type="button" id="btnGenerateUniquePw" class="text-xs font-extrabold text-cyan-300 hover:underline">
               ✨ Auto-Generate
             </button>
           </div>
           <input type="password" id="regPassword" required placeholder="Min 8 chars, A-Z, a-z, 0-9, symbol"
-            class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-indigo-400" />
-          <p id="pwUniqueFeedback" class="text-xs text-slate-400 mt-1">
+            class="w-full px-4 py-2.5 rounded-xl bg-slate-950/80 border border-white/20 text-sm text-white focus:outline-none focus:border-fuchsia-400" />
+          <p id="pwUniqueFeedback" class="text-xs text-slate-300 mt-1">
             Must be unique across all users in Supabase.
           </p>
         </div>
 
-        <div id="signupErrorBox" class="hidden p-3 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-300 text-xs"></div>
+        <div id="signupErrorBox" class="hidden p-3 rounded-xl bg-rose-500/20 border border-rose-400/50 text-rose-200 text-xs"></div>
 
         <button type="submit"
-          class="w-full py-3 rounded-2xl bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-sm shadow-lg shadow-indigo-500/25 transition">
+          class="w-full py-3 rounded-2xl bg-gradient-to-r from-fuchsia-500 via-purple-500 to-indigo-500 hover:opacity-95 text-white font-extrabold text-sm shadow-lg shadow-fuchsia-500/30 transition">
           Create Account &amp; Continue
         </button>
       </form>
@@ -346,25 +377,25 @@
       <!-- LOGIN FORM -->
       <form id="formLogin" class="hidden space-y-3.5">
         <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Email or Username</label>
+          <label class="block text-xs font-bold text-slate-200 mb-1">Email or Username</label>
           <input type="text" id="loginIdentifier" required placeholder="Enter email or username"
-            class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-indigo-400" />
+            class="w-full px-4 py-2.5 rounded-xl bg-slate-950/80 border border-white/20 text-sm text-white focus:outline-none focus:border-cyan-400" />
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Your Password</label>
+          <label class="block text-xs font-bold text-slate-200 mb-1">Your Password</label>
           <input type="password" id="loginPassword" required placeholder="Enter your password"
-            class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-indigo-400" />
+            class="w-full px-4 py-2.5 rounded-xl bg-slate-950/80 border border-white/20 text-sm text-white focus:outline-none focus:border-cyan-400" />
         </div>
 
-        <div id="loginErrorBox" class="hidden p-3 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-300 text-xs"></div>
+        <div id="loginErrorBox" class="hidden p-3 rounded-xl bg-rose-500/20 border border-rose-400/50 text-rose-200 text-xs"></div>
 
         <button type="submit"
-          class="w-full py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/25 transition">
+          class="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-400 to-cyan-500 hover:opacity-95 text-slate-950 font-extrabold text-sm shadow-lg shadow-emerald-500/30 transition">
           Login &amp; Unlock Unlimited Access
         </button>
       </form>
 
-      <div class="mt-4 pt-3 border-t border-slate-800 text-center text-[11px] text-slate-500">
+      <div class="mt-4 pt-3 border-t border-white/10 text-center text-[11px] text-slate-400">
         &copy; 2026 Naresh (naresh-coderrr). All Rights Reserved.
       </div>
     </div>

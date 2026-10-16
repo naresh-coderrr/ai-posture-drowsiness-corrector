@@ -367,14 +367,14 @@
     const cardBoxPosture = document.getElementById("cardBoxPosture");
     if (data.posture.is_slouching) {
       cardPostureStatus.textContent = "Slouching — Sit Up!";
-      cardPostureStatus.className = "text-lg font-extrabold text-rose-400";
+      cardPostureStatus.className = "text-lg font-extrabold text-rose-300";
       cardPostureSub.textContent = data.posture.reasons[0] || "Straighten your back and neck";
-      cardBoxPosture.className = "bg-rose-950/30 rounded-3xl p-4 border border-rose-500/50 flex items-center justify-between gap-4 transition";
+      cardBoxPosture.className = "vibrant-glass-card card-glow-alert rounded-3xl p-4 flex items-center justify-between gap-4 transition";
     } else {
       cardPostureStatus.textContent = "Sitting Straight";
-      cardPostureStatus.className = "text-lg font-extrabold text-emerald-400";
+      cardPostureStatus.className = "text-lg font-extrabold text-white";
       cardPostureSub.textContent = "Shoulders balanced & aligned";
-      cardBoxPosture.className = "bg-[#111827] rounded-3xl p-4 border border-slate-800 flex items-center justify-between gap-4 transition";
+      cardBoxPosture.className = "vibrant-glass-card card-glow-emerald rounded-3xl p-4 flex items-center justify-between gap-4 transition";
     }
 
     // 2. Eyes & Blink Card
@@ -384,13 +384,13 @@
     const cardEyeStatus = document.getElementById("cardEyeStatus");
     if (data.ear.closed_seconds >= 1.0) {
       cardEyeStatus.textContent = "Eyes Closing / Drowsy!";
-      cardEyeStatus.className = "text-lg font-extrabold text-rose-400";
+      cardEyeStatus.className = "text-lg font-extrabold text-rose-300";
     } else if (data.mar.value > data.mar.threshold) {
       cardEyeStatus.textContent = "Yawning Detected";
       cardEyeStatus.className = "text-lg font-extrabold text-amber-300";
     } else {
       cardEyeStatus.textContent = "Awake & Focused";
-      cardEyeStatus.className = "text-lg font-extrabold text-cyan-300";
+      cardEyeStatus.className = "text-lg font-extrabold text-white";
     }
 
     // 3. Mobile Phone Card (True AI Object Detector)
@@ -402,19 +402,19 @@
 
     if (data.distraction.phone_detected) {
       cardPhoneState.textContent = "Mobile Phone Spotted!";
-      cardPhoneState.className = "text-lg font-extrabold text-rose-400";
+      cardPhoneState.className = "text-lg font-extrabold text-rose-200";
       cardPhoneReason.textContent = `Phone detected (${Math.round(data.distraction.phone_confidence)}% confidence) — Put it away!`;
       cardPhoneBadge.textContent = "Alert!";
-      cardPhoneBadge.className = "px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500/20 text-rose-300";
-      cardBoxPhone.className = "bg-rose-950/30 rounded-3xl p-4 border border-rose-500/50 flex items-center justify-between gap-4 transition";
+      cardPhoneBadge.className = "px-3 py-1 rounded-full text-xs font-extrabold bg-rose-500/30 text-rose-200 border border-rose-400/50";
+      cardBoxPhone.className = "vibrant-glass-card card-glow-alert rounded-3xl p-4 flex items-center justify-between gap-4 transition";
       iconBoxPhone.textContent = "📱";
     } else {
       cardPhoneState.textContent = "No Phone Detected";
-      cardPhoneState.className = "text-lg font-extrabold text-emerald-400";
-      cardPhoneReason.textContent = "Hands & palms ignored — only real phones trigger alerts";
+      cardPhoneState.className = "text-lg font-extrabold text-white";
+      cardPhoneReason.textContent = "Hands ignored • AI watches for real phones";
       cardPhoneBadge.textContent = "Clear";
-      cardPhoneBadge.className = "px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-300";
-      cardBoxPhone.className = "bg-[#111827] rounded-3xl p-4 border border-slate-800 flex items-center justify-between gap-4 transition";
+      cardPhoneBadge.className = "px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-500/25 text-emerald-200 border border-emerald-400/40";
+      cardBoxPhone.className = "vibrant-glass-card card-glow-purple rounded-3xl p-4 flex items-center justify-between gap-4 transition";
       iconBoxPhone.textContent = "📵";
     }
 
@@ -564,6 +564,7 @@
   });
 
   async function initWebcam() {
+    const promptOverlay = document.getElementById("cameraPromptOverlay");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" },
@@ -571,14 +572,21 @@
       });
       webcamVideo.srcObject = stream;
       await webcamVideo.play();
+      promptOverlay?.classList.add("hidden");
+      document.getElementById("liveStatusText").textContent = "You're doing great! Keep sitting straight 👍";
       if (pipCanvas.captureStream) {
         pipVideo.srcObject = pipCanvas.captureStream(15);
         pipVideo.play().catch(() => {});
       }
     } catch (_) {
-      document.getElementById("liveStatusText").textContent = "Please allow camera access in your browser!";
+      promptOverlay?.classList.remove("hidden");
+      document.getElementById("liveStatusText").textContent = "Click 'Start Live Camera Now' below to enable webcam!";
     }
   }
+
+  document.getElementById("btnRetryCamera")?.addEventListener("click", () => {
+    initWebcam();
+  });
 
   // --- Button Handlers ---
   document.getElementById("btnCalibrate")?.addEventListener("click", () => {
