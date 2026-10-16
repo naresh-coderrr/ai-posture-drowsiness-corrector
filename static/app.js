@@ -1,5 +1,8 @@
 /**
- * SpineGuard AI — User-Friendly Real-Time Posture, Drowsiness & True Mobile Phone Detector
+ * SpineGuard AI — Hybrid Real-Time Posture, Drowsiness & True Mobile Phone Detector
+ * Supports:
+ * 1) Local Python MediaPipe Backend (WebSocket / HTTP)
+ * 2) Vercel / Cloud Serverless Mode via official @mediapipe/tasks-vision WebAssembly + WebGL Engine!
  * © 2026 Naresh (naresh-coderrr). All Rights Reserved.
  */
 
@@ -30,7 +33,38 @@
   let lastNotificationTimestamp = 0;
   let latestTelemetry = null;
 
-  // Funny Voice Roasts
+  // Hybrid Engine State: Uses Python backend locally, or automatically activates Browser MediaPipe Tasks on Vercel!
+  let useClientMediaPipe = false;
+  let clientModelsReady = false;
+  let clientModelsLoading = false;
+  let mpFaceLandmarker = null;
+  let mpPoseLandmarker = null;
+  let mpObjectDetector = null;
+
+  // Client-Side MediaPipe Stateful Session (Matches vision_engine.py 1:1)
+  const clientSession = {
+    blink_count: 0,
+    yawn_count: 0,
+    eye_closed_start: null,
+    yawn_start: null,
+    slouch_start: null,
+    phone_start: null,
+    distracted_start: null,
+    was_blinking: false,
+    was_yawning: false,
+    baseline_neck_ratio: null,
+    baseline_shoulder_y: null,
+    calibrated: false,
+    blink_timestamps: [],
+    ear_threshold: 0.22,
+    mar_threshold: 0.58,
+    posture_sensitivity: 1.0,
+  };
+
+  const LEFT_EYE_IDX = [362, 385, 387, 263, 373, 380];
+  const RIGHT_EYE_IDX = [33, 160, 158, 133, 153, 144];
+  const MOUTH_IDX = [61, 37, 13, 267, 291, 314, 14, 84];
+
   const FUNNY_VOICE_LINES = {
     DROWSY: [
       "Wake up buddy! Your eyes just closed! Sit up straight right now!",
@@ -73,6 +107,348 @@
   const videoAlertOverlay = document.getElementById("videoAlertOverlay");
   const videoAlertTitle = document.getElementById("videoAlertTitle");
   const videoAlertDesc = document.getElementById("videoAlertDesc");
+
+  // --- Load Official @mediapipe/tasks-vision in Browser when running on Vercel Serverless ---
+  async function initClientMediaPipeModels() {
+    if (clientModelsReady || clientModelsLoading) return;
+    clientModelsLoading = true;
+    try {
+      const vision = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs");
+      const filesetResolver = await vision.FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
+      );
+
+      const [faceLm, poseLm, objDet] = await Promise.all([
+        vision.FaceLandmarker.createFromOptions(filesetResolver, {
+          baseOptions: {
+            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+          },
+          runningMode: "IMAGE",
+          numFaces: 1,
+          minFaceDetectionConfidence: 0.45,
+          minFacePresenceConfidence: 0.45,
+          minTrackingConfidence: 0.45,
+        }),
+        vision.PoseLandmarker.createFromOptions(filesetResolver, {
+          baseOptions: {
+            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+          },
+          runningMode: "IMAGE",
+          numPoses: 1,
+          minPoseDetectionConfidence: 0.45,
+          minPosePresenceConfidence: 0.45,
+          minTrackingConfidence: 0.45,
+        }),
+        vision.ObjectDetector.createFromOptions(filesetResolver, {
+          baseOptions: {
+            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/int8/1/efficientdet_lite0.tflite",
+          },
+          runningMode: "IMAGE",
+          scoreThreshold: 0.35,
+          categoryAllowlist: ["cell phone", "remote"],
+          maxResults: 3,
+        }),
+      ]);
+
+      mpFaceLandmarker = faceLm;
+      mpPoseLandmarker = poseLm;
+      mpObjectDetector = objDet;
+      clientModelsReady = true;
+    } catch (err) {
+      console.error("Failed to load MediaPipe WebAssembly models:", err);
+    } finally {
+      clientModelsLoading = false;
+    }
+  }
+
+  function dist2D(p1, p2) {
+    return Math.hypot(p1[0] - p2[0], p1[1] - p2[1]);
+  }
+
+  function calcEAR(landmarks, indices, w, h) {
+    const pts = indices.map((i) => [landmarks[i].x * w, landmarks[i].y * h]);
+    const v1 = dist2D(pts[1], pts[5]);
+    const v2 = dist2D(pts[2], pts[4]);
+    const horiz = dist2D(pts[0], pts[3]);
+    if (horiz < 1e-6) return 0.30;
+    return (v1 + v2) / (2.0 * horiz);
+  }
+
+  function calcMAR(landmarks, indices, w, h) {
+    const pts = indices.map((i) => [landmarks[i].x * w, landmarks[i].y * h]);
+    const v1 = dist2D(pts[1], pts[7]);
+    const v2 = dist2D(pts[2], pts[6]);
+    const v3 = dist2D(pts[3], pts[5]);
+    const horiz = dist2D(pts[0], pts[4]);
+    if (horiz < 1e-6) return 0.0;
+    return (v1 + v2 + v3) / (2.0 * horiz);
+  }
+
+  function analyzeFrameClientSide(canvasEl, forceCalibrate = false) {
+    const sess = clientSession;
+    const now = Date.now() / 1000.0;
+    const w = canvasEl.width;
+    const h = canvasEl.height;
+
+    const faceRes = mpFaceLandmarker.detect(canvasEl);
+    const poseRes = mpPoseLandmarker.detect(canvasEl);
+    const objRes = mpObjectDetector.detect(canvasEl);
+
+    let ear_left = 0.30, ear_right = 0.30, ear_avg = 0.30, mar = 0.15;
+    let head_yaw = 0.0, head_pitch = 0.0, head_roll = 0.0;
+    let face_detected = false;
+    let spine_score = 100, neck_angle = 90.0, shoulder_tilt = 0.0;
+    const slouch_reasons = [];
+    let phone_detected = false, phone_confidence = 0.0;
+    const phone_boxes = [];
+    let distracted_detected = false, distraction_reason = "";
+
+    const overlay_points = {
+      left_eye: [],
+      right_eye: [],
+      mouth: [],
+      pose: [],
+      phone_boxes: [],
+    };
+
+    if (faceRes.faceLandmarks && faceRes.faceLandmarks.length > 0) {
+      face_detected = true;
+      const flm = faceRes.faceLandmarks[0];
+      ear_left = calcEAR(flm, LEFT_EYE_IDX, w, h);
+      ear_right = calcEAR(flm, RIGHT_EYE_IDX, w, h);
+      ear_avg = Number(((ear_left + ear_right) / 2.0).toFixed(3));
+      mar = Number(calcMAR(flm, MOUTH_IDX, w, h).toFixed(3));
+
+      overlay_points.left_eye = LEFT_EYE_IDX.map((i) => [flm[i].x, flm[i].y]);
+      overlay_points.right_eye = RIGHT_EYE_IDX.map((i) => [flm[i].x, flm[i].y]);
+      overlay_points.mouth = MOUTH_IDX.map((i) => [flm[i].x, flm[i].y]);
+
+      const nose = flm[1], forehead = flm[10], chin = flm[152], lCheek = flm[234], rCheek = flm[454];
+      const cheekMidX = (lCheek.x + rCheek.x) / 2.0;
+      const cheekSpan = Math.max(0.05, Math.abs(rCheek.x - lCheek.x));
+      head_yaw = Number((((nose.x - cheekMidX) / cheekSpan) * 90.0).toFixed(1));
+
+      const faceHeight = Math.max(0.05, Math.abs(chin.y - forehead.y));
+      const noseRelY = (nose.y - forehead.y) / faceHeight;
+      head_pitch = Number(((noseRelY - 0.56) * 160.0).toFixed(1));
+
+      const dyEyes = (flm[263].y - flm[33].y) * h;
+      const dxEyes = (flm[263].x - flm[33].x) * w;
+      head_roll = Number(((Math.atan2(dyEyes, Math.max(1.0, dxEyes)) * 180) / Math.PI).toFixed(1));
+
+      if (ear_avg < sess.ear_threshold) {
+        if (sess.eye_closed_start === null) sess.eye_closed_start = now;
+        sess.was_blinking = true;
+      } else {
+        if (sess.was_blinking) {
+          const closedDur = now - (sess.eye_closed_start || now);
+          if (closedDur >= 0.04 && closedDur <= 0.65) {
+            sess.blink_count += 1;
+            sess.blink_timestamps.push(now);
+          }
+        }
+        sess.was_blinking = false;
+        sess.eye_closed_start = null;
+      }
+
+      sess.blink_timestamps = sess.blink_timestamps.filter((t) => now - t <= 60.0);
+
+      if (mar > sess.mar_threshold) {
+        if (sess.yawn_start === null) sess.yawn_start = now;
+        else if (now - sess.yawn_start > 1.1 && !sess.was_yawning) {
+          sess.yawn_count += 1;
+          sess.was_yawning = true;
+        }
+      } else {
+        sess.yawn_start = null;
+        sess.was_yawning = false;
+      }
+
+      if (Math.abs(head_yaw) > 30.0) {
+        distracted_detected = true;
+        distraction_reason = "Looking away from screen";
+      } else if (head_pitch > 24.0) {
+        distracted_detected = true;
+        distraction_reason = "Head drooping down";
+      }
+    } else {
+      distracted_detected = true;
+      distraction_reason = "Face not in camera view";
+    }
+
+    if (poseRes.landmarks && poseRes.landmarks.length > 0) {
+      const plm = poseRes.landmarks[0];
+      const nose_p = plm[0], l_sh = plm[11], r_sh = plm[12];
+      overlay_points.pose = [
+        { id: "nose", x: nose_p.x, y: nose_p.y },
+        { id: "left_shoulder", x: l_sh.x, y: l_sh.y },
+        { id: "right_shoulder", x: r_sh.x, y: r_sh.y },
+      ];
+
+      const shMidX = (l_sh.x + r_sh.x) / 2.0;
+      const shMidY = (l_sh.y + r_sh.y) / 2.0;
+      const shWidth = Math.max(0.10, Math.abs(l_sh.x - r_sh.x));
+      const neckVerticalRatio = (shMidY - nose_p.y) / shWidth;
+
+      if (forceCalibrate || (!sess.calibrated && neckVerticalRatio > 0.55)) {
+        sess.baseline_neck_ratio = neckVerticalRatio;
+        sess.baseline_shoulder_y = shMidY;
+        sess.calibrated = true;
+      }
+
+      const baselineRatio = sess.baseline_neck_ratio || 0.78;
+      shoulder_tilt = Number(
+        ((Math.atan2((r_sh.y - l_sh.y) * h, Math.max(1.0, Math.abs(r_sh.x - l_sh.x) * w)) * 180) / Math.PI).toFixed(1)
+      );
+
+      const dxSpine = (nose_p.x - shMidX) * w;
+      const dySpine = (shMidY - nose_p.y) * h;
+      const axialOffsetDeg = Math.abs((Math.atan2(dxSpine, Math.max(1.0, dySpine)) * 180) / Math.PI);
+      neck_angle = Number((90.0 - axialOffsetDeg).toFixed(1));
+
+      const ratioDrop = Math.max(0.0, (baselineRatio - neckVerticalRatio) / Math.max(0.2, baselineRatio));
+      const shoulderDrop = Math.max(0.0, shMidY - (sess.baseline_shoulder_y || shMidY));
+      const sens = sess.posture_sensitivity;
+      let penalty = 0.0;
+
+      if (ratioDrop > 0.14 / sens) {
+        penalty += Math.min(45.0, ratioDrop * 180.0 * sens);
+        slouch_reasons.push("Neck slouching forward");
+      }
+      if (Math.abs(shoulder_tilt) > 8.0 / sens) {
+        penalty += Math.min(30.0, (Math.abs(shoulder_tilt) - 5.0) * 2.8 * sens);
+        slouch_reasons.push("Uneven shoulders");
+      }
+      if (axialOffsetDeg > 12.0 / sens) {
+        penalty += Math.min(30.0, (axialOffsetDeg - 8.0) * 2.2 * sens);
+        slouch_reasons.push("Leaning to one side");
+      }
+      if (shoulderDrop > 0.05 / sens) {
+        penalty += Math.min(25.0, shoulderDrop * 300.0 * sens);
+        slouch_reasons.push("Slouching down in chair");
+      }
+      spine_score = Math.max(0, Math.min(100, Math.round(100.0 - penalty)));
+    }
+
+    if (objRes.detections && objRes.detections.length > 0) {
+      objRes.detections.forEach((det) => {
+        if (!det.categories || det.categories.length === 0) return;
+        const score = det.categories[0].score || 0.0;
+        if (score >= 0.35 && det.boundingBox) {
+          phone_detected = true;
+          phone_confidence = Math.max(phone_confidence, Math.round(score * 100));
+          const bb = det.boundingBox;
+          phone_boxes.push({
+            x: bb.originX / w,
+            y: bb.originY / h,
+            w: bb.width / w,
+            h: bb.height / h,
+            score: Math.round(score * 100),
+          });
+        }
+      });
+    }
+    overlay_points.phone_boxes = phone_boxes;
+
+    const eye_closed_duration = sess.eye_closed_start ? now - sess.eye_closed_start : 0.0;
+    const is_drowsy = eye_closed_duration >= 1.35 || (sess.yawn_start !== null && now - sess.yawn_start >= 1.6);
+
+    const is_slouching = spine_score < 68;
+    if (is_slouching) {
+      if (sess.slouch_start === null) sess.slouch_start = now;
+    } else {
+      sess.slouch_start = null;
+    }
+    const slouch_duration = sess.slouch_start ? now - sess.slouch_start : 0.0;
+
+    if (phone_detected) {
+      if (sess.phone_start === null) sess.phone_start = now;
+    } else {
+      sess.phone_start = null;
+    }
+    const phone_duration = sess.phone_start ? now - sess.phone_start : 0.0;
+
+    if (distracted_detected) {
+      if (sess.distracted_start === null) sess.distracted_start = now;
+    } else {
+      sess.distracted_start = null;
+    }
+    const distracted_duration = sess.distracted_start ? now - sess.distracted_start : 0.0;
+
+    let active_alert = null;
+    if (is_drowsy) {
+      active_alert = {
+        type: "DROWSY",
+        severity: "critical",
+        title: "WAKE UP! DROWSINESS DETECTED",
+        message: eye_closed_duration >= 1.35
+          ? `Your eyes have been closed for ${eye_closed_duration.toFixed(1)}s! Sit up straight!`
+          : "Heavy yawning detected! Sit up and stay focused!",
+      };
+    } else if (phone_detected && phone_duration >= 0.3) {
+      active_alert = {
+        type: "PHONE_DISTRACTION",
+        severity: "critical",
+        title: "MOBILE PHONE DETECTED!",
+        message: `Mobile phone spotted (${phone_confidence}% confidence). Put your phone away and focus!`,
+      };
+    } else if (slouch_duration >= 1.5) {
+      active_alert = {
+        type: "SLOUCH",
+        severity: "warning",
+        title: "SIT UP STRAIGHT!",
+        message: `${slouch_reasons[0] || "Slouching detected"} (Posture: ${spine_score}%). Straighten your back!`,
+      };
+    } else if (distracted_duration >= 2.5) {
+      active_alert = {
+        type: "DISTRACTED",
+        severity: "info",
+        title: "EYES ON SCREEN!",
+        message: `${distraction_reason}. Lock back into your study session!`,
+      };
+    }
+
+    return {
+      timestamp: now,
+      face_detected,
+      calibrated: sess.calibrated,
+      ear: {
+        left: ear_left,
+        right: ear_right,
+        avg: ear_avg,
+        threshold: sess.ear_threshold,
+        closed_seconds: eye_closed_duration,
+      },
+      mar: { value: mar, threshold: sess.mar_threshold },
+      blinks: {
+        total: sess.blink_count,
+        per_minute: sess.blink_timestamps.length,
+        yawns: sess.yawn_count,
+      },
+      posture: {
+        spine_score,
+        neck_angle,
+        shoulder_tilt,
+        head_yaw,
+        head_pitch,
+        head_roll,
+        is_slouching,
+        slouch_seconds: slouch_duration,
+        reasons: slouch_reasons,
+      },
+      distraction: {
+        phone_detected,
+        phone_confidence,
+        phone_seconds: phone_duration,
+        phone_reason: phone_detected ? `Mobile Phone Detected (${phone_confidence}%)` : "No phone detected",
+        looking_away: distracted_detected,
+        distracted_seconds: distracted_duration,
+        distraction_reason,
+      },
+      active_alert,
+      overlay: overlay_points,
+    };
+  }
 
   // --- Web Audio API & Background Keep-Alive ---
   let audioCtx = null;
@@ -245,7 +621,7 @@
     }
   }, 1000);
 
-  // --- Draw Clean Visual Overlays on Video (Eyes, Shoulders, and Phone Bounding Box) ---
+  // --- Draw Clean Visual Overlays on Video ---
   function drawVideoOverlay(data) {
     if (!webcamVideo.videoWidth) return;
     if (hudCanvas.width !== webcamVideo.videoWidth || hudCanvas.height !== webcamVideo.videoHeight) {
@@ -259,7 +635,6 @@
     if (!data || !data.overlay) return;
     const ov = data.overlay;
 
-    // 1. Subtle Eye Outlines
     const eyeColor = data.ear.avg < data.ear.threshold ? "#f43f5e" : "#22d3ee";
     [ov.left_eye, ov.right_eye].forEach((eyePts) => {
       if (!eyePts || eyePts.length === 0) return;
@@ -274,7 +649,6 @@
       hudCtx.stroke();
     });
 
-    // 2. Shoulder Posture Line
     if (ov.pose && ov.pose.length >= 3) {
       const map = {};
       ov.pose.forEach((p) => { map[p.id] = p; });
@@ -298,7 +672,6 @@
       }
     }
 
-    // 3. Mobile Phone Bounding Box (Only drawn when actual cell phone is detected!)
     if (ov.phone_boxes && ov.phone_boxes.length > 0) {
       ov.phone_boxes.forEach((box) => {
         const bx = box.x * w;
@@ -308,14 +681,12 @@
         hudCtx.strokeStyle = "#f43f5e";
         hudCtx.lineWidth = 3.5;
         hudCtx.strokeRect(bx, by, bw, bh);
-
         hudCtx.fillStyle = "rgba(244, 63, 94, 0.22)";
         hudCtx.fillRect(bx, by, bw, bh);
       });
     }
   }
 
-  // --- Update Floating Mini Study Window (PiP) ---
   function updatePipCanvas(data) {
     const w = pipCanvas.width;
     const h = pipCanvas.height;
@@ -352,11 +723,9 @@
     }
   }
 
-  // --- Update User-Friendly Dashboard UI ---
   function updateDashboardUI(data) {
     latestTelemetry = data;
 
-    // Video Top-Left Pills
     document.getElementById("hudBlinkCount").textContent = data.blinks.total;
     document.getElementById("hudSpineScore").textContent = `${data.posture.spine_score}%`;
 
@@ -393,7 +762,7 @@
       cardEyeStatus.className = "text-lg font-extrabold text-white";
     }
 
-    // 3. Mobile Phone Card (True AI Object Detector)
+    // 3. Mobile Phone Card
     const cardPhoneState = document.getElementById("cardPhoneState");
     const cardPhoneReason = document.getElementById("cardPhoneReason");
     const cardPhoneBadge = document.getElementById("cardPhoneBadge");
@@ -421,7 +790,6 @@
     drawVideoOverlay(data);
     updatePipCanvas(data);
 
-    // Friendly Live Header Status & Alert Trigger
     const liveStatusText = document.getElementById("liveStatusText");
     const liveBadgeDot = document.getElementById("liveBadgeDot");
 
@@ -455,12 +823,26 @@
     }
   }
 
-  // --- WebSocket & Background Tab Worker ---
+  // --- Hybrid WebSocket + Client MediaPipe Fallback ---
   let ws = null;
   let wsConnected = false;
   let frameInFlight = false;
 
+  async function detectBackendMode() {
+    try {
+      const res = await fetch("/api/health");
+      const info = await res.json();
+      if (info && info.python_vision_available === false) {
+        useClientMediaPipe = true;
+        initClientMediaPipeModels();
+        return;
+      }
+    } catch (_) {}
+    connectWebSocket();
+  }
+
   function connectWebSocket() {
+    if (useClientMediaPipe) return;
     const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${proto}//${window.location.host}/ws/analyze/${SESSION_ID}`;
     ws = new WebSocket(wsUrl);
@@ -474,6 +856,11 @@
       frameInFlight = false;
       try {
         const data = JSON.parse(event.data);
+        if (data && data.use_client_mediapipe) {
+          useClientMediaPipe = true;
+          initClientMediaPipeModels();
+          return;
+        }
         if (data && data.ear) {
           updateDashboardUI(data);
         }
@@ -483,7 +870,9 @@
     ws.onclose = () => {
       wsConnected = false;
       frameInFlight = false;
-      setTimeout(connectWebSocket, 1500);
+      if (!useClientMediaPipe) {
+        setTimeout(connectWebSocket, 2000);
+      }
     };
 
     ws.onerror = () => {
@@ -497,9 +886,29 @@
     if (!webcamVideo || webcamVideo.readyState < 2) return;
 
     captureCtx.drawImage(webcamVideo, 0, 0, captureCanvas.width, captureCanvas.height);
-    const dataUri = captureCanvas.toDataURL("image/jpeg", 0.65);
     const shouldCalibrate = forceCalibrateNext;
     forceCalibrateNext = false;
+
+    // Mode A: Client-Side MediaPipe Tasks (Used automatically on Vercel Serverless!)
+    if (useClientMediaPipe) {
+      if (!clientModelsReady) {
+        initClientMediaPipeModels();
+        return;
+      }
+      frameInFlight = true;
+      try {
+        const telemetry = analyzeFrameClientSide(captureCanvas, shouldCalibrate);
+        updateDashboardUI(telemetry);
+      } catch (e) {
+        console.warn("Client MediaPipe frame error:", e);
+      } finally {
+        frameInFlight = false;
+      }
+      return;
+    }
+
+    // Mode B: Local Python MediaPipe Backend via WebSocket / HTTP
+    const dataUri = captureCanvas.toDataURL("image/jpeg", 0.65);
 
     if (wsConnected && ws && ws.readyState === WebSocket.OPEN) {
       frameInFlight = true;
@@ -520,7 +929,10 @@
             force_calibrate: shouldCalibrate
           })
         });
-        if (res.ok) {
+        if (res.status === 503) {
+          useClientMediaPipe = true;
+          initClientMediaPipeModels();
+        } else if (res.ok) {
           const telemetry = await res.json();
           updateDashboardUI(telemetry);
         }
@@ -552,12 +964,12 @@
     if (document.hidden) {
       if (badge) {
         badge.textContent = "Watching in Background 🟢";
-        badge.className = "text-xs font-bold px-2.5 py-1 rounded-full bg-indigo-500/20 text-indigo-300";
+        badge.className = "text-xs font-bold px-3 py-1 rounded-full bg-indigo-500/30 text-indigo-200 border border-indigo-400/40";
       }
     } else {
       if (badge) {
-        badge.textContent = "Background Study Guard: Ready";
-        badge.className = "text-xs font-medium px-2.5 py-1 rounded-full bg-slate-800 text-slate-300";
+        badge.textContent = "🛡️ Study Guard: Active";
+        badge.className = "text-xs font-bold px-3 py-1 rounded-full bg-gradient-to-r from-indigo-500/25 to-purple-500/25 text-indigo-200 border border-indigo-400/30";
       }
       document.title = "SpineGuard AI — Posture, Drowsiness & Phone Guard | © Naresh";
     }
@@ -588,7 +1000,6 @@
     initWebcam();
   });
 
-  // --- Button Handlers ---
   document.getElementById("btnCalibrate")?.addEventListener("click", () => {
     forceCalibrateNext = true;
     const btn = document.getElementById("btnCalibrate");
@@ -676,15 +1087,15 @@
   tabBtnSignup?.addEventListener("click", () => {
     formSignup.classList.remove("hidden");
     formLogin.classList.add("hidden");
-    tabBtnSignup.className = "py-2.5 rounded-xl text-xs font-bold bg-indigo-500 text-white transition";
-    tabBtnLogin.className = "py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition";
+    tabBtnSignup.className = "py-2.5 rounded-xl text-xs font-extrabold bg-gradient-to-r from-fuchsia-500 to-indigo-500 text-white transition";
+    tabBtnLogin.className = "py-2.5 rounded-xl text-xs font-extrabold text-slate-300 hover:text-white transition";
   });
 
   tabBtnLogin?.addEventListener("click", () => {
     formLogin.classList.remove("hidden");
     formSignup.classList.add("hidden");
-    tabBtnLogin.className = "py-2.5 rounded-xl text-xs font-bold bg-emerald-500 text-slate-950 transition";
-    tabBtnSignup.className = "py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition";
+    tabBtnLogin.className = "py-2.5 rounded-xl text-xs font-extrabold bg-gradient-to-r from-emerald-400 to-cyan-500 text-slate-950 transition";
+    tabBtnSignup.className = "py-2.5 rounded-xl text-xs font-extrabold text-slate-300 hover:text-white transition";
   });
 
   document.getElementById("btnGenerateUniquePw")?.addEventListener("click", () => {
@@ -703,7 +1114,7 @@
     clearTimeout(pwCheckTimer);
     if (!val) {
       fb.textContent = "Must be unique across all users in Supabase.";
-      fb.className = "text-xs text-slate-400 mt-1";
+      fb.className = "text-xs text-slate-300 mt-1";
       return;
     }
     pwCheckTimer = setTimeout(async () => {
@@ -715,7 +1126,7 @@
         });
         const data = await res.json();
         fb.textContent = data.message;
-        fb.className = data.unique ? "text-xs text-emerald-400 mt-1 font-semibold" : "text-xs text-rose-400 mt-1 font-semibold";
+        fb.className = data.unique ? "text-xs text-emerald-300 mt-1 font-bold" : "text-xs text-rose-300 mt-1 font-bold";
       } catch (_) {}
     }, 260);
   });
@@ -781,6 +1192,6 @@
 
   updateAuthUI();
   initWebcam();
-  connectWebSocket();
+  detectBackendMode();
   startUnthrottledWorkerTimer();
 })();

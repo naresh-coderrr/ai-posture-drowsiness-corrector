@@ -1,0 +1,7 @@
+models/
+*.task
+*.tflite
+data/
+.env
+requirements-local.txt
+__pycache__/

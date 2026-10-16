@@ -58,7 +58,10 @@ def validate_password_strength(password: str) -> Tuple[bool, str]:
 
 class SupabaseAuthManager:
     def __init__(self):
-        os.makedirs(DATA_DIR, exist_ok=True)
+        try:
+            os.makedirs(DATA_DIR, exist_ok=True)
+        except Exception:
+            pass
         self.supabase_url: str = (
             os.environ.get("SUPABASE_URL")
             or os.environ.get("NEXT_PUBLIC_SUPABASE_URL")
@@ -72,6 +75,7 @@ class SupabaseAuthManager:
         self.connected: bool = False
         self.table_verified: bool = False
         self.connection_error: Optional[str] = None
+        self._memory_users: List[Dict[str, Any]] = []
 
         self._load_saved_config()
         self._init_local_store()
@@ -101,19 +105,26 @@ class SupabaseAuthManager:
 
     def _init_local_store(self):
         if not os.path.exists(LOCAL_DB_PATH):
-            with open(LOCAL_DB_PATH, "w", encoding="utf-8") as f:
-                json.dump({"users": [], "sessions": []}, f, indent=2)
+            try:
+                with open(LOCAL_DB_PATH, "w", encoding="utf-8") as f:
+                    json.dump({"users": [], "sessions": []}, f, indent=2)
+            except Exception:
+                pass
 
     def _read_local(self) -> Dict[str, Any]:
         try:
             with open(LOCAL_DB_PATH, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
-            return {"users": [], "sessions": []}
+            return {"users": self._memory_users, "sessions": []}
 
     def _write_local(self, data: Dict[str, Any]):
-        with open(LOCAL_DB_PATH, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
+        self._memory_users = data.get("users", [])
+        try:
+            with open(LOCAL_DB_PATH, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+        except Exception:
+            pass
 
     def _verify_supabase_connection(self) -> str:
         self.connected = False

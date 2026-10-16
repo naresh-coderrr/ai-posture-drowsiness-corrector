@@ -1,39 +1,39 @@
 """
-AI Posture & Drowsiness Corrector — FastAPI Real-Time Server
+AI Posture & Drowsiness Corrector — FastAPI Server (Local Python MediaPipe + Vercel Serverless Ready)
 © 2026 Naresh (naresh-coderrr). All Rights Reserved.
-
-Provides:
-- WebSocket `/ws/analyze/{session_id}` for low-latency real-time webcam frame analysis (even when user is in background tabs!)
-- HTTP `/api/analyze` fallback endpoint
-- Calibration `/api/calibrate` & Threshold configuration `/api/thresholds`
-- Supabase Auth & Globally Unique Password validation (`/api/auth/check-password`, `/api/auth/register`, `/api/auth/login`, `/api/supabase/connect`)
-- Static Web UI serving with responsive Laptop + Mobile layout, Background Tab Worker, PiP HUD, and Audio/Notification alerts
 """
 
 import os
 import json
 import base64
-from typing import Optional
+from typing import Optional, Any
 
-import cv2
-import numpy as np
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from vision_engine import PostureDrowsinessEngine
 from supabase_auth import SupabaseAuthManager
+
+# Optional local Python MediaPipe + OpenCV engine (gracefully skipped on Vercel Serverless <500MB limit)
+try:
+    import cv2
+    import numpy as np
+    from vision_engine import PostureDrowsinessEngine
+    vision_engine: Optional[Any] = PostureDrowsinessEngine()
+except Exception:
+    cv2 = None
+    np = None
+    vision_engine = None
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
-os.makedirs(STATIC_DIR, exist_ok=True)
 
 app = FastAPI(
     title="SpineGuard AI — Real-Time Posture & Drowsiness Corrector",
     description="Real-time MediaPipe Face & Pose Aspect Ratio tracker with Supabase Unique-Password Auth. © 2026 Naresh (naresh-coderrr).",
-    version="1.0.0",
+    version="1.1.0",
 )
 
 app.add_middleware(
@@ -44,7 +44,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-vision_engine = PostureDrowsinessEngine()
 auth_manager = SupabaseAuthManager()
 
 
@@ -82,8 +81,10 @@ class SupabaseConnectRequest(BaseModel):
     supabase_key: str
 
 
-def decode_base64_frame(data_uri: str) -> Optional[np.ndarray]:
+def decode_base64_frame(data_uri: str):
     """Decode base64 JPEG/PNG data URI into OpenCV BGR numpy array."""
+    if cv2 is None or np is None:
+        return None
     try:
         if "," in data_uri:
             data_uri = data_uri.split(",", 1)[1]
@@ -100,7 +101,8 @@ def decode_base64_frame(data_uri: str) -> Optional[np.ndarray]:
 async def health_check():
     return {
         "status": "ok",
-        "engine": "MediaPipe Tasks (Face + Pose + Hand Landmarker)",
+        "python_vision_available": vision_engine is not None,
+        "engine": "MediaPipe Tasks (Face + Pose + ObjectDetector)",
         "copyright": "© 2026 Naresh (naresh-coderrr). All Rights Reserved.",
         "supabase": auth_manager.get_status(),
     }
@@ -143,6 +145,8 @@ async def login_user(req: LoginRequest):
 
 @app.post("/api/analyze")
 async def analyze_frame_http(req: FrameAnalyzeRequest):
+    if vision_engine is None:
+        return JSONResponse(status_code=503, content={"use_client_mediapipe": True})
     frame = decode_base64_frame(req.image_base64)
     if frame is None:
         raise HTTPException(status_code=400, detail="Invalid base64 image frame")
@@ -156,6 +160,8 @@ async def analyze_frame_http(req: FrameAnalyzeRequest):
 
 @app.post("/api/calibrate")
 async def calibrate_posture(req: FrameAnalyzeRequest):
+    if vision_engine is None:
+        return {"calibrated": True, "use_client_mediapipe": True}
     frame = decode_base64_frame(req.image_base64)
     if frame is None:
         raise HTTPException(status_code=400, detail="Invalid base64 image frame")
@@ -164,19 +170,24 @@ async def calibrate_posture(req: FrameAnalyzeRequest):
 
 @app.post("/api/thresholds")
 async def update_thresholds(req: ThresholdUpdateRequest):
-    vision_engine.update_thresholds(
-        session_id=req.session_id,
-        ear_threshold=req.ear_threshold,
-        mar_threshold=req.mar_threshold,
-        posture_sensitivity=req.posture_sensitivity,
-    )
+    if vision_engine is not None:
+        vision_engine.update_thresholds(
+            session_id=req.session_id,
+            ear_threshold=req.ear_threshold,
+            mar_threshold=req.mar_threshold,
+            posture_sensitivity=req.posture_sensitivity,
+        )
     return {"ok": True}
 
 
-# --- Real-Time WebSocket Endpoint ---
+# --- Real-Time WebSocket Endpoint (Local Python Server) ---
 @app.websocket("/ws/analyze/{session_id}")
 async def websocket_analyze(websocket: WebSocket, session_id: str):
     await websocket.accept()
+    if vision_engine is None:
+        await websocket.send_json({"use_client_mediapipe": True})
+        await websocket.close()
+        return
     try:
         while True:
             raw_text = await websocket.receive_text()
@@ -214,8 +225,8 @@ async def websocket_analyze(websocket: WebSocket, session_id: str):
         pass
 
 
-# Mount static files and root index.html
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+if os.path.exists(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 @app.get("/")
